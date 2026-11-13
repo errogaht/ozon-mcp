@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import { toResponseInputItems } from 'openai/lib/responses/ResponseInputItems';
 import { z } from 'zod';
 import { AppError, publicError } from './config.js';
+import { recordProviderFailure } from './provider-diagnostics.js';
 import { catalogURL, inferredBudget, selectEvidence } from './policy.js';
 
 const actionSchemas = {
@@ -48,19 +49,26 @@ Finish via the finish tool, not free text. Its note describes limitations, never
  * No previous_response_id/server storage is needed; no credential or raw error
  * body is logged. A failed call is not silently retried as another paid run. */
 export async function modelResponse(client, request, signal) {
-  let completed = null;
+  let completed = null; let requestId = null; let phase = 'request'; let eventsReceived = 0;
+  const started = performance.now();
   try {
-    const stream = await client.responses.create({ ...request, store: false, stream: true, include: ['reasoning.encrypted_content'] }, { signal });
+    const pending = client.responses.create({ ...request, store: false, stream: true, include: ['reasoning.encrypted_content'] }, { signal });
+    // withResponse retains the HTTP request ID even when reading SSE later fails.
+    const wrapped = typeof pending.withResponse === 'function' ? await pending.withResponse() : { data: await pending };
+    const stream = wrapped.data; requestId = wrapped.request_id ?? null; phase = 'stream';
     for await (const event of stream) {
+      eventsReceived++;
       if (event.type === 'response.completed') completed = event.response;
       if (event.type === 'response.failed' || event.type === 'error' || event.type === 'response.incomplete') throw new AppError('provider_incomplete', 'Модель не завершила запрос.');
     }
+    if (!completed) throw new AppError('provider_incomplete', 'Поток модели завершился без результата.');
   } catch (error) {
-    if (error instanceof AppError) throw error;
-    if (signal?.aborted) throw new AppError('timeout', 'Истекло время работы внутреннего агента.');
-    throw new AppError('provider_error', `Ошибка доступа к модели${Number.isInteger(error.status) ? ` (HTTP ${error.status})` : ''}. Сессия Ozon сохранена.`);
+    const receipt = await recordProviderFailure(error, { requestId, phase, eventsReceived, elapsedMs: performance.now() - started, aborted: Boolean(signal?.aborted) });
+    const failure = error instanceof AppError ? error : new AppError(receipt.category === 'timeout' || signal?.aborted ? 'timeout' : 'provider_error',
+      receipt.category === 'timeout' || signal?.aborted ? 'Истекло время ожидания модели. Сессия Ozon сохранена.' : `Ошибка доступа к модели${receipt.status ? ` (HTTP ${receipt.status})` : ''}. Сессия Ozon сохранена.`);
+    failure.diagnosticId = receipt.diagnosticId;
+    throw failure;
   }
-  if (!completed) throw new AppError('provider_incomplete', 'Поток модели завершился без результата.');
   return completed;
 }
 

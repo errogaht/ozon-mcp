@@ -68,7 +68,7 @@ export class AppError extends Error {
 /** Do not forward provider/browser error bodies: they may include headers,
  * auth tokens, account text, or echoed prompts. Known application errors are safe. */
 export function publicError(error) {
-  if (error instanceof AppError) return { code: error.code, message: error.message };
+  if (error instanceof AppError) return { code: error.code, message: error.message, ...(/^[a-f0-9-]{36}$/.test(error.diagnosticId ?? '') ? { diagnosticId: error.diagnosticId } : {}) };
   if (error?.name === 'AbortError' || error?.name === 'TimeoutError' || error?.name === 'APIConnectionTimeoutError') return { code: 'timeout', message: 'Истекло время ожидания. Браузерная сессия сохранена; можно повторить запрос.' };
   return { code: 'internal_error', message: 'Операция не завершена. Проверьте состояние MCP и браузера через status.' };
 }
