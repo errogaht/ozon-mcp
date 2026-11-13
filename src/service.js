@@ -47,6 +47,7 @@ export async function runService() {
         if (payload.method === 'auth_save') return browser.saveAuth(cfg);
         if (payload.method === 'search') return workflows.search(parsed.data, cfg);
         if (payload.method === 'product') return workflows.product(parsed.data, cfg);
+        if (['product_variants', 'product_variant_select'].includes(payload.method)) return workflows.variants(parsed.data, cfg);
         if (payload.method === 'search_filters') return workflows.filters(parsed.data, cfg);
         if (['product_media', 'review_media'].includes(payload.method)) return workflows.gallery(parsed.data, cfg);
         if (payload.method === 'media_get') return workflows.getMedia(parsed.data, cfg);

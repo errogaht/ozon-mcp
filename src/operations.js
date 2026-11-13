@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
 import { AppError, stateDir, writePrivateJSON } from './config.js';
+import { discoverVariants, selectReviewScope } from './variants.js';
 import { BrowserAdapter, runAdapter, evidenceText, entityId, clickObserved, readElementData } from './adapter.js';
 import { scopedURL, finalButtonAllowed, assertClickAllowed } from './action-policy.js';
 import { outputSchemas } from './contracts.js';
@@ -126,6 +127,23 @@ export class ConsumerOperations {
       seller: data.seller, delivery: data.delivery, variant: data.variant.value, media: await this.resolvedMedia(adapter, data.mediaRefs),
       coverage: { complete: !missing.length, missing, requestedSections: sections }, observedAt: new Date().toISOString(), agent: { ...meta, subtasks } };
   }
+  async variants(args, cfg) {
+    const adapter = await this.open(args.url, { kind: 'product', scope: 'catalog', mode: 'read' }, cfg);
+    const result = await discoverVariants(this, adapter, cfg);
+    if (!args.variantId) return result;
+    // Rediscover on every call: persisted snapshot refs are not click authority.
+    const matches = result.groups.flatMap(group => group.options).filter(option => option.id === args.variantId);
+    if (matches.length !== 1 || matches[0].disabled) throw new AppError('variant_unavailable', 'Выбранный вариант не найден однозначно или недоступен. Обновите список вариантов.');
+    const option = matches[0];
+    // A real observed product URL gives exact SKU verification after navigation.
+    // Non-link selectors are reported, but cannot silently change an unknown SKU.
+    if (!option.url) throw new AppError('variant_identity_unverified', 'У варианта не подтверждён адрес/SKU. Переключение без проверки идентичности запрещено.');
+    await adapter.act('browser_click', { sourceRef: option.sourceRef, purpose: 'Select the exact observed product variant' });
+    await adapter.page.waitForTimeout(900);
+    if (productId(adapter.page.url()) !== option.sku) throw new AppError('variant_identity_unverified', 'После переключения не подтверждён SKU выбранного варианта.');
+    return { status: 'selected', variant: option, url: scopedURL(adapter.page.url()), sku: option.sku,
+      instruction: 'Используйте возвращённый url для карточки, медиа, покупки и отзывов scope=current.' };
+  }
   async filters(args, cfg) {
     const { data, adapter, meta } = await this.extract('filters', searchURL(args.query), {
       action: 'Discover category-specific search filters and actual sort options. Open sort dropdown to read options, then close it without choosing if possible.',
@@ -202,6 +220,14 @@ export class ConsumerOperations {
     const deliveryLabel = containsLiteral(evidenceText(adapter, result.data.deliverySourceRef), result.data.deliveryLabel) ? result.data.deliveryLabel : null;
     return { ...validateCardPrice(result.data.priceOzonCard, adapter), delivery: deliveryDates(deliveryLabel), sourceUrl: this.pricePage.url().split('?')[0], observedAt: new Date().toISOString(), verification: result.meta, missing: result.data.missing };
   }
+  async reviewScope(adapter, scope, cfg, apply = true) {
+    return selectReviewScope(adapter, scope, { apply, verifyVisual: async () => {
+      adapter.visualObserved = false;
+      const result = await this.adapt(adapter, { action: 'Inspect ONLY whether the visible Этот вариант товара review-filter chip is ACTIVE/selected. Do not click anything.',
+        requirements: 'Use browser_view NOW. Selected filled/highlighted chip = active true; inactive/outlined chip = false. Read exact chip sourceRef from current snapshot. If ambiguous active=null. Never infer from review text/count or mere label presence.' }, outputSchemas.review_scope, { ...cfg, adapter: { ...cfg.adapter, maxSteps: 4 } });
+      return adapter.visualObserved && /Этот вариант/iu.test(evidenceText(adapter, result.data.sourceRef) ?? '') && !result.data.missing.length ? result.data.active : null;
+    } });
+  }
   async selectReviewSort(adapter, wanted, cfg) {
     await adapter.observe({ viewportOnly: false });
     const labels = () => [...adapter.current.nodes.values()].filter(n => n.text.length < 90 && n.text.trim() && !n.text.includes('\n'));
@@ -243,19 +269,25 @@ export class ConsumerOperations {
     const u = new URL(base); u.search = ''; u.hash = ''; u.pathname = u.pathname.replace(/\/?$/, '/') + (kind === 'reviews' ? 'reviews/' : 'questions/');
     const cursor = args.cursor ? await this.readCursor(args.cursor, kind, args.url) : null;
     const sort = args.sort ?? 'useful';
+    const reviewScope = kind === 'reviews' ? args.scope ?? 'current' : null;
+    if (cursor && (cursor.reviewScope ?? 'all') !== reviewScope && kind === 'reviews') throw new AppError('invalid_cursor', 'Курсор относится к другому фильтру вариантов.');
     if (cursor && cursor.sort !== sort) throw new AppError('invalid_cursor', 'Курсор относится к другой сортировке.');
     const seen = new Set(cursor?.seen ?? []); const limit = args.limit ?? 15;
-    const adapter = await this.open(cursor?.resumeUrl ?? u.href, { kind, scope: 'catalog', mode: 'read', initialViewportOnly: false }, cfg);
+    const adapter = await this.open(cursor?.resumeUrl ?? (kind === 'reviews' ? base : u.href), { kind, scope: 'catalog', mode: 'read', initialViewportOnly: false }, cfg);
+    if (kind === 'reviews' && productId(adapter.page.url()) !== productId(args.url)) throw new AppError('variant_identity_unverified', 'Страница отзывов открылась для другого SKU.');
+    const scopeProof = kind === 'reviews' ? await this.reviewScope(adapter, reviewScope, cfg) : null;
+    if (scopeProof && !scopeProof.verified) return { status: 'review_scope_unavailable', reviewScope: scopeProof, items: [], nextCursor: null, coverage: { complete: false, missing: ['Не подтверждён фильтр отзывов: ' + scopeProof.label] } };
     const appliedSort = kind === 'reviews' ? await this.selectReviewSort(adapter, sort, cfg) : null;
     if (appliedSort && !appliedSort.verified) return { status: 'sort_unavailable', requestedSort: sort, actualSort: appliedSort.label, items: [], nextCursor: null,
       coverage: { complete: false, missing: appliedSort.missing ?? ['Не подтверждена запрошенная сортировка.'] } };
     if (cursor?.scrollY) { await adapter.page.evaluate(y => window.scrollTo(0, y), cursor.scrollY); await adapter.page.waitForTimeout(600); }
+    if (scopeProof && !(await this.reviewScope(adapter, reviewScope, cfg, false)).verified) throw new AppError('review_scope_unavailable', 'Сортировка сбросила фильтр варианта.');
     const seenSeeds = new Set(cursor?.seenSeeds ?? []); const items = []; const missing = []; const subtasks = [];
     let candidates = []; let totalCount = null;
     for (let pass = 0; pass < 4; pass++) {
       await adapter.observe({ viewportOnly: false }); candidates = listEntityCandidates(adapter, kind);
       const heading = [...adapter.current.nodes.values()].find(n => kind === 'reviews' ? /Отзывы о товаре\s+\d/iu.test(n.name) : /^Вопросы\s*\d/iu.test(n.name));
-      totalCount = Number(heading?.name.match(/\d+/)?.[0]) || null;
+      totalCount = kind === 'reviews' && reviewScope === 'current' ? scopeProof.count ?? null : Number(heading?.name.match(/\d+/)?.[0]) || null;
       if (candidates.some(candidate => !seenSeeds.has(entityId('seed', candidate.seed)))) break;
       await adapter.page.evaluate(() => window.scrollBy(0, innerHeight * 1.5)); await adapter.page.waitForTimeout(800);
     }
@@ -288,7 +320,7 @@ export class ConsumerOperations {
     try { for (const candidate of bound) {
       const seed = entityId('seed', candidate.seed); if (seenSeeds.has(seed)) continue;
       const regionLocator = candidate.regionLocator;
-      const isolated = new BrowserAdapter(adapter.page, { kind, scope: 'catalog', mode: 'read', regionLocator, initialViewportOnly: false,
+      const isolated = new BrowserAdapter(adapter.page, { kind, scope: 'catalog', mode: 'read', regionLocator, initialViewportOnly: false, reviewScope,
         progressPath: path.join(stateDir(), 'receipts/adapter-active.json') }, cfg, this.media);
       isolated.task.headerDate = candidate.text.match(/(?:измен[её]н\s+)?\d{1,2}\s+[а-я]+\s+20\d{2}/iu)?.[0] ?? null;
       let rejected = 0;
@@ -321,11 +353,12 @@ export class ConsumerOperations {
     } } finally {
       for (const candidate of bound) { await candidate.handle.evaluate(el => el.removeAttribute('data-ozon-mcp-region')).catch(() => {}); await candidate.handle.dispose().catch(() => {}); }
     }
+    if (scopeProof && (!(await this.reviewScope(adapter, reviewScope, cfg, false)).verified || productId(adapter.page.url()) !== productId(args.url))) throw new AppError('review_scope_unavailable', 'Фильтр варианта изменился во время чтения; результаты не возвращаются.');
     const hasMore = totalCount === null || seenSeeds.size < totalCount;
     const stalled = hasMore && items.length === 0;
     if (stalled) missing.push('Не удалось продвинуть страницу к новым сущностям; повторяющийся курсор не выдан.');
-    const nextCursor = hasMore && !stalled ? await this.saveCursor(kind, args.url, { seen: [...seen], seenSeeds: [...seenSeeds], sort, resumeUrl: adapter.page.url(), scrollY: await adapter.page.evaluate(() => scrollY) }) : null;
-    return { url: args.url, requestedSort: kind === 'reviews' ? sort : null, sort: appliedSort?.label ?? null, items, nextCursor, paginationStalled: stalled,
+    const nextCursor = hasMore && !stalled ? await this.saveCursor(kind, args.url, { seen: [...seen], seenSeeds: [...seenSeeds], sort, reviewScope, resumeUrl: adapter.page.url(), scrollY: await adapter.page.evaluate(() => scrollY) }) : null;
+    return { url: args.url, sku: productId(args.url), reviewScope: scopeProof, requestedSort: kind === 'reviews' ? sort : null, sort: appliedSort?.label ?? null, items, nextCursor, paginationStalled: stalled,
       coverage: { complete: !hasMore && !missing.length, pageComplete: items.length >= Math.min(limit, (totalCount ?? limit) - (cursor?.seenSeeds?.length ?? 0)), hasMore, loadedCount: items.length, totalCount, missing },
       observedAt: new Date().toISOString(), agent: { ...cfg.models.browserAgent, subtasks } };
   }
@@ -338,11 +371,11 @@ export class ConsumerOperations {
     const id = entityId(kind === 'reviews' ? 'review' : 'question', productId(url) ?? url, raw.author ?? '', date ?? '', text ?? rawText ?? '');
     if (kind === 'reviews') {
       const item = { id, author: raw.author, date, stars: adapter.task.renderedRating?.stars ?? (raw.starsSource === 'visual' && !adapter.visualObserved ? null : raw.stars),
-      starsEvidence: adapter.task.renderedRating?.evidence ?? raw.starsSource, variant: raw.variant, text, pros: await this.hydrateRef(adapter, raw.prosRef), cons: await this.hydrateRef(adapter, raw.consRef), fullTextExpanded: raw.fullTextExpanded,
+      starsEvidence: adapter.task.renderedRating?.evidence ?? raw.starsSource, variant: this.checked(raw.variant, raw.sourceRef, adapter), reviewScope: adapter.task.reviewScope ?? null, text, pros: await this.hydrateRef(adapter, raw.prosRef), cons: await this.hydrateRef(adapter, raw.consRef), fullTextExpanded: raw.fullTextExpanded,
       media: bestObservedMedia([...(adapter.evidence(raw.sourceRef).media ?? []), ...await this.resolvedMedia(adapter, raw.mediaRefs)]).filter(media => media.displayedWidth >= 70 && media.displayedHeight >= 70),
       replies: await Promise.all(raw.replyRefs.map(ref => this.hydrateRef(adapter, ref))), helpfulCount: raw.helpfulCount,
       unhelpfulCount: raw.unhelpfulCount, verifiedPurchase: raw.verifiedPurchase, rawText, sourceRef: raw.sourceRef };
-      await writePrivateJSON(path.join(stateDir(), 'entities', id + '.json'), { id, productUrl: url, listUrl: adapter.page.url(), author: item.author, date: item.date, text: item.text,
+      await writePrivateJSON(path.join(stateDir(), 'entities', id + '.json'), { id, reviewScope: adapter.task.reviewScope ?? null, productUrl: url, listUrl: adapter.page.url(), author: item.author, date: item.date, text: item.text,
         scrollY: await adapter.page.evaluate(() => scrollY), observedAt: new Date().toISOString() });
       return item;
     }
@@ -357,6 +390,7 @@ export class ConsumerOperations {
       try { record = JSON.parse(await fs.readFile(path.join(stateDir(), 'entities', args.reviewId + '.json'), 'utf8')); } catch { throw new AppError('unknown_review', 'Отзыв ещё не прочитан. Сначала вызовите ozon_reviews.'); }
     }
     const adapter = await this.open(record?.listUrl ?? args.url, { kind: 'media', scope: 'catalog', mode: 'read' }, cfg);
+    if (record?.reviewScope && !(await this.reviewScope(adapter, record.reviewScope, cfg)).verified) throw new AppError('review_scope_unavailable', 'Не подтверждён фильтр варианта исходного отзыва.');
     const videoSources = new Set();
     // Observe ONLY media response metadata generated by this real viewer.
     // Never read response bodies/authorization headers or call hidden APIs.

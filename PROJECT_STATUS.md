@@ -3,7 +3,7 @@
 Version 0.2.0. Public source repository: https://github.com/errogaht/ozon-mcp.
 This project is not enrolled in Markdown Task Tracker; do not enroll automatically.
 
-25 consumer tools are implemented. See README.md for configuration, supported
+27 consumer tools are implemented. See README.md for configuration, supported
 workflows and confirmation semantics. Linux/Node.js 22+/visible Chrome are the
 verified environment. Model selection and reasoning are configured by purpose.
 
@@ -36,3 +36,22 @@ three-result cheaper search subsequently completed with explicit missing-data
 coverage; the original provider error did not reproduce. Two bounded model probes
 completed. Broker reloaded without closing Chrome. These successful later calls
 do not identify the original failure or guarantee future provider availability.
+
+## Product variants and review scope
+
+Added product_variants and product_variant_select. Native group containment and
+observed product URL/SKU ground every selectable option; switching rediscoveries
+options before clicking and checks the destination SKU. Non-link choices are
+reported conservatively and cannot silently select an unknown SKU.
+
+Reviews default to current variant; all-group scope is explicit. Selection is
+verified from native state or a fresh screenshot of the actual filter chip, with
+style evidence cached only inside the current adapter. Sort/pagination and review
+media retain scope; unavailable selection returns no reviews.
+
+Validation: 40/40 fixture tests and syntax checks pass. Live discovery on a
+multivariant product returned 11 color choices; selecting another color confirmed
+the exact new SKU. Reading one review with current scope returned verified active
+filter and matching variant attributes. Pagination uses the filter's 1,467 count,
+not the unchanged 56,018 group header. Size/other unopened non-link choices remain
+explicitly partial and are not claimed as selectable. No cart/order mutation.

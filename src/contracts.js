@@ -15,7 +15,7 @@ export const searchInput = z.object({
   filters: z.array(filterInput).max(20).optional()
 }).strict();
 export const productInput = z.object({ url, sections: z.array(z.enum(['summary', 'description', 'characteristics', 'seller', 'delivery'])).optional() }).strict();
-export const listInput = z.object({ url, sort: z.enum(['useful', 'new', 'rating_asc', 'rating_desc']).optional(), limit: z.number().int().min(1).max(50).optional(), cursor: z.string().max(100).optional() }).strict();
+export const listInput = z.object({ url, scope: z.enum(['current', 'all']).default('current'), sort: z.enum(['useful', 'new', 'rating_asc', 'rating_desc']).optional(), limit: z.number().int().min(1).max(50).optional(), cursor: z.string().max(100).optional() }).strict();
 
 const sourcedString = z.object({ value: short.nullable(), sourceRef: ref }).strict();
 const price = z.object({ amount: number, sourceRef: ref, basisLabel: short.nullable(), verifiedOzonCard: z.boolean() }).strict();
@@ -32,6 +32,8 @@ const checkoutItem = z.object({ title: short, sku: short.nullable(), quantity: z
  * The adapter hydrates those refs from the live page so reviews/descriptions
  * cannot be silently summarized or cut to the model's output token budget. */
 export const outputSchemas = {
+  review_scope: z.object({ active: z.boolean().nullable(), sourceRef: ref, missing: z.array(short).max(10) }).strict(),
+  variants: z.object({ groups: z.array(z.object({ label: short, sourceRef: ref, options: z.array(z.object({ label: short, sourceRef: ref }).strict()).max(60) }).strict()).max(12), missing: z.array(short).max(20) }).strict(),
   checkout_items: z.object({ items: z.array(checkoutItem).max(50), missing: z.array(short).max(10) }).strict(),
   review_sort: z.object({ label: short.nullable(), sourceRef: ref, missing: z.array(short).max(10) }).strict(),
   entity_plan: z.object({ entityRefs: mediaRefs, totalCount: number, hasMore: z.boolean(), missing: z.array(short).max(10) }).strict(),
@@ -85,6 +87,8 @@ export const confirmationInput = z.object({ token: z.string().min(30).max(100), 
 /** Mutation requests are explicit intent, separate from preview/read. Finals
  * use prepared tokens; reversible actions require apply=true from the caller. */
 export const consumerInputs = {
+  product_variants: z.object({ url }).strict(),
+  product_variant_select: z.object({ url, variantId: z.string().regex(/^variant_[a-f0-9]{20}$/) }).strict(),
   search_filters: z.object({ query: z.string().min(2).max(500), expand: z.boolean().optional() }).strict(),
   product_media: z.object({ url, limit: z.number().int().min(1).max(100).optional() }).strict(),
   review_media: z.object({ reviewId: z.string().regex(/^review_[a-f0-9]{20}$/), limit: z.number().int().min(1).max(100).optional() }).strict(),
