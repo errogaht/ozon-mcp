@@ -27,6 +27,7 @@ export function createMcpServer(invoke = callService) {
   register('ozon_search', 'search', 'Поиск с ценой Ozon Карты, рейтингом товара, числом отзывов/вопросов и сроком доставки. sort: popular/cheaper/expensive/rating/new/relevance. Фильтры: цена, brands, deliveryWithinDays и динамические name/values из ozon_search_filters. Неподтверждённые ограничения не игнорируются.', searchInput, true);
   register('ozon_product', 'product', 'Полная карточка: название, подтверждённая цена Ozon Карты, рейтинг/отзывы/вопросы, раскрытое описание/характеристики, продавец и доставка. sections позволяет узкий запрос. Для галереи, полных отзывов и вопросов используйте отдельные инструменты.', productInput, true);
   const definitions = [
+    ['shopping_list','Создать или сверить личный лист покупок без обложки: name и productUrls. apply=true выполняет разрешённое сохранение с проверкой каждого SKU и приватности. При неизвестном исходе сначала collections с name. Повторный вызов не дублирует готовый список.',false],
     ['product_variants', 'Наблюдаемые группы вариантов товара: цвет, размер, мощность, комплектация. Возвращает варианты с variantId, URL/SKU и состоянием.', true],
     ['product_variant_select', 'Переключить на вариант из product_variants по variantId. Заново проверяет вариант и конечный SKU. Используйте возвращённый url для карточки и отзывов.', true],
     ['search_filters', 'Показать актуальные фильтры текущей категории и варианты сортировки. Раскрывает цену, бренд, срок доставки и категорийные параметры; исключает финансовые промо.', true],

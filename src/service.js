@@ -55,6 +55,7 @@ export async function runService() {
         if (['reviews', 'questions'].includes(payload.method)) return workflows.list(payload.method, parsed.data, cfg);
         if (payload.method === 'orders') return workflows.orders(parsed.data, cfg);
         if (payload.method === 'order_detail') return workflows.orderDetail(parsed.data, cfg);
+        if (payload.method === 'shopping_list') return workflows.shoppingList(parsed.data,cfg);
         if (payload.method === 'collections') return workflows.collections(parsed.data, cfg);
         if (payload.method === 'cart') return workflows.cart(parsed.data, cfg);
         if (['collection_create', 'favorite', 'cart_add'].includes(payload.method)) return workflows.reversible(payload.method, parsed.data, cfg);

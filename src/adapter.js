@@ -50,7 +50,15 @@ export async function clickObserved(locator) {
   // Styled native checkboxes often hide the input and render its associated
   // label instead. Follow that native association, never an Ozon widget class.
   const proxy = await locator.evaluateHandle(el => {
-    if (el.matches('input[type="checkbox"],input[type="radio"]')) return [...(el.labels ?? [])].find(label => label.getBoundingClientRect().width > 0) ?? null;
+    if (el.matches('input[type="checkbox"],input[type="radio"]')) {
+      const label = [...(el.labels ?? [])].find(label => label.getBoundingClientRect().width > 0);
+      if (label) return label;
+      // Some native switches have no label association and hide a 1px input.
+      // Only its small single-control wrapper is a safe visual proxy.
+      const parent = el.parentElement; const box = parent?.getBoundingClientRect();
+      if (box && box.width >= 8 && box.width <= 120 && box.height >= 8 && box.height <= 80 && parent.querySelectorAll('input').length === 1 && !parent.querySelector('button,a')) return parent;
+      return null;
+    }
     return null;
   });
   const actual = proxy.asElement() ?? locator;

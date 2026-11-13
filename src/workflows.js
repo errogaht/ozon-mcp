@@ -1,3 +1,5 @@
+import { ensureShoppingList, readNamedList, listIndex } from './shopping-lists.js';
+import { waitForSearch, preciseQueryMatches } from './search-readiness.js';
 import { ConsumerOperations, validateCardPrice } from './operations.js';
 import { evidenceText, entityId, clickObserved } from './adapter.js';
 import { outputSchemas } from './contracts.js';
@@ -19,6 +21,7 @@ export class ConsumerWorkflows extends ConsumerOperations {
     const max = args.maxPriceRub ?? inferredBudget(args.query); const limit = Math.min(args.limit ?? cfg.agent.defaultLimit, cfg.agent.maxLimit);
     const phrase = args.query.replace(/^(?:найди|найти|подбери|покажи|ищу)\s+/iu, '').replace(/(?:до|не\s+дороже)\s*\d[\d\s.,]*(?:тыс\.?|[кk])?\s*(?:руб(?:лей|ля)?\.?|₽|р\b)?/iu, '').trim().slice(0, 300);
     const adapter = await this.open(searchURL(phrase, max), { kind: 'filter_apply', scope: 'catalog', mode: 'read' }, cfg);
+    await waitForSearch(adapter.page, phrase);
     let applied = null;
     if ((args.sort && args.sort !== 'relevance') || args.minPriceRub !== undefined || args.brands?.length || args.deliveryWithinDays !== undefined || args.filters?.length) {
       applied = (await this.applyFilters(adapter, { ...args, maxPriceRub: max }, cfg)).data;
@@ -37,8 +40,9 @@ export class ConsumerWorkflows extends ConsumerOperations {
     // Literal card facts also avoid Luna shortening a long title or dropping a
     // valid card merely because its bank price needs a separate verification.
     const visible = [...observedCards.values()];
-    const rows = visible.length ? visible.slice(0, limit).map(card => rowsBySku.get(card.sku) ?? { title: card.title, url: card.url, sourceRef: null,
-      priceOzonCard: { amount: null, sourceRef: null, basisLabel: null, verifiedOzonCard: false }, deliveryLabel: null, stockLabel: null, badges: [], sellerName: null, mediaRefs: [] }) : data.items;
+    // Never fill the requested quota with unrelated native cards. The inner
+    // adapter chooses matches; the host grounds them while preserving UI order.
+    const rows = visible.length ? visible.filter(card => rowsBySku.has(card.sku)).map(card => rowsBySku.get(card.sku)) : data.items;
     for (const raw of rows) {
       const sku = productId(raw.url);
       let url; try { url = scopedURL(raw.url); } catch { rejected.push({ sku, reason: 'invalid_url' }); continue; }
@@ -46,6 +50,7 @@ export class ConsumerWorkflows extends ConsumerOperations {
       const candidate = observedCards.get(sku) ?? initialCards.find(card => card.sku === sku);
       const text = candidate?.cardText ?? await this.hydrateRef(adapter, raw.sourceRef);
       const title = candidate?.title ?? raw.title;
+      if (!preciseQueryMatches(args.query, title)) { rejected.push({ sku, reason: 'query_model_mismatch' }); continue; }
       if (!text || !text.includes(title)) { rejected.push({ sku, reason: 'title_not_observed' }); continue; }
       const literal = visibleCardFacts(text);
       let price = validateCardPrice(raw.priceOzonCard, adapter); let delivery = deliveryDates(literal.deliveryLabel ?? raw.deliveryLabel);
@@ -147,14 +152,16 @@ export class ConsumerWorkflows extends ConsumerOperations {
     return result.map(product => ({ ...product, quantity: product.quantity !== null && new RegExp(`(?:^|\\D)${product.quantity}\\s*шт`, 'iu').test(text ?? '') ? product.quantity : null }));
   }
   async collections(args, cfg) {
-    const { data, adapter, meta } = await this.extract('collections', 'https://www.ozon.ru/my/favorites/', { action: 'Read favorites, wishlists and collections. Open the collections tab if present. Return exact names, descriptions, visibility, cover media and item counts; do not edit or create anything.' }, cfg, { scope: 'collections' });
-    return { items: await Promise.all(data.items.map(async item => ({ ...item, cover: item.coverRef ? await this.resolvedMedia(adapter, [item.coverRef]) : [] }))), coverage: this.coverage(data), agent: meta };
+    const page=await this.browser.beginRun(cfg);await page.bringToFront();
+    return args.name ? readNamedList(page,cfg,args.name,args.kind==='wishlist'?'wishlist':'collection') : listIndex(page,cfg,args.kind??'all');
   }
+  async shoppingList(args,cfg) { return ensureShoppingList(this,args,cfg); }
   async cart(args, cfg) {
     const { data, adapter, meta } = await this.extract('cart', 'https://www.ozon.ru/cart', { action: 'Read the cart only. Never toggle selections, change quantities, delete items or proceed to purchase.', requirements: 'Return items with exact quantities, selection state, Ozon Card price and delivery. Distinguish total selection amount from sum of all items.' }, cfg, { scope: 'checkout' });
     return { items: data.items.map(item => ({ ...item, priceOzonCard: validateCardPrice(item.priceOzonCard, adapter) })), total: data.total, coverage: this.coverage(data, data.items.length), agent: meta };
   }
   async reversible(kind, args, cfg) {
+    if (kind === 'collection_create' && args.isPublic===false && !args.coverMediaId) return this.shoppingList(args,cfg);
     if (kind === 'collection_create') return this.createCollection(args, cfg);
     const specs = {
       collection_create: { url: 'https://www.ozon.ru/my/favorites/', scope: 'collections', action: 'Create ONE collection with EXACT requested name, description, visibility and cover. Do not alter an existing unrelated collection.' },
@@ -188,7 +195,9 @@ export class ConsumerWorkflows extends ConsumerOperations {
       if (destination) proof &&= result.data.destination?.toLocaleLowerCase() === destination.toLocaleLowerCase() && !!enclosingEvidence(adapter, result.data.membershipRef, text => containsLiteral(text, destination), 1000);
     }
     const verified = proof && !result.data.missing.length;
+    if (!verified && !result.data.missing.length) result.data.missing.push('Не подтверждены точный SKU, состояние сохранения или членство в указанном списке. Изменение могло примениться; используйте collections с name для сверки.');
     return { status: verified ? result.data.applied ? 'applied' : 'already_present' : 'unverified', stateVerified: verified, action: kind, target, evidence, missing: result.data.missing,
+      reconcile: !verified && kind==='favorite' && destination ? {tool:'ozon_collections',arguments:{kind:args.target==='wishlist'?'wishlist':'collection',name:destination}} : null,
       instruction: verified ? 'Нужное состояние подтверждено Ozon.' : 'Изменение могло примениться. Сначала прочитайте корзину/список, не повторяйте изменение вслепую.', agent: result.meta };
   }
 
@@ -196,7 +205,7 @@ export class ConsumerWorkflows extends ConsumerOperations {
     if (!args.apply) return { status: 'preview', action: 'collection_create', requested: args, instruction: 'Перед созданием проверьте название/описание/обложку/isPublic; apply=true допустим по поручению владельца.' };
     const adapter = await this.open('https://www.ozon.ru/my/favorites/', { kind: 'collection_create', scope: 'collections', mode: 'prepare', mediaIds: args.coverMediaId ? [args.coverMediaId] : [], allowCollectionCommit: false }, cfg);
     const staged = await this.adapt(adapter, { action: 'Open creation form for ONE collection; fill exact requested fields, do NOT click its final Save/Create button.', requested: args,
-      requirements: 'If an existing collection has same name, stop/report missing rather than duplicating/overwriting. Set visibility EXACTLY isPublic; identify actual switch/checkbox ref. Upload assigned cover. Ozon may show Выбрать товары as NEXT step: return it as saveButtonRef WITHOUT clicking; host validates current fields first. Return all field refs from latest snapshot.' }, outputSchemas.collection_form, cfg);
+      requirements: 'Cover is OPTIONAL: if no coverMediaId is assigned, do NOT upload and do NOT report absent cover as missing. Product selection is a later HOST stage: do NOT report not-yet-added products or not-clicked Выбрать товары as missing. Use missing ONLY for actual form errors. If an existing collection has same name, stop/report missing rather than duplicating/overwriting. Set visibility EXACTLY isPublic; identify actual switch/checkbox ref. Upload cover ONLY when coverMediaId was assigned. Ozon may show Выбрать товары as NEXT step: return it as saveButtonRef WITHOUT clicking; host validates current fields first. Return all field refs from latest snapshot.' }, outputSchemas.collection_form, cfg);
     const data = staged.data; const missing = [...data.missing];
     const name = await this.hydrateRef(adapter, data.nameRef); const description = await this.hydrateRef(adapter, data.descriptionRef);
     if (name !== args.name) missing.push('Не подтверждено точное название.');

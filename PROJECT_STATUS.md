@@ -3,7 +3,7 @@
 Version 0.2.0. Public source repository: https://github.com/errogaht/ozon-mcp.
 This project is not enrolled in Markdown Task Tracker; do not enroll automatically.
 
-27 consumer tools are implemented. See README.md for configuration, supported
+28 consumer tools are implemented. See README.md for configuration, supported
 workflows and confirmation semantics. Linux/Node.js 22+/visible Chrome are the
 verified environment. Model selection and reasoning are configured by purpose.
 
@@ -55,3 +55,40 @@ the exact new SKU. Reading one review with current scope returned verified activ
 filter and matching variant attributes. Pagination uses the filter's 1,467 count,
 not the unchanged 56,018 group header. Size/other unopened non-link choices remain
 explicitly partial and are not claimed as selectable. No cart/order mutation.
+
+## Shopping-list end-to-end repair
+
+Added shopping_list for a private collection without cover. Inspects current index
+before creation, grounds requested product identities, ensures favorites without
+toggling saved items off, selects exact linkless picker rows, commits and reloads
+the list to verify private status and every SKU. Existing partial lists can be
+opened through their native Add-products action; unrelated entries are preserved
+by refusing an incompatible requested set. Unknown submits are not retried blindly.
+
+Collections supports kind and exact name, reads both index tabs, detects equal-name
+objects and checks native counts rather than stopping at ten. Favorite unverified
+outcomes include a reason and an explicit reconciliation call. Native switch and
+rendered-picker checkbox handling is independent of generated Ozon CSS classes.
+
+Search now waits for query hydration/stable cards and never replaces selected
+matching candidates with unrelated leading cards. Literal model/brand anchors
+provide another negative control. Synthetic tests cover delayed query changes,
+wrong leading results, eleventh/duplicate list cards, exact picker identities,
+custom checkmarks and a hidden single-control visibility switch.
+
+Live authorized acceptance saved ONE private four-product list, then independent
+readback confirmed every exact SKU and another ensure returned already_present.
+Private name, list/account identifiers and URLs are kept only in local evidence.
+No order/checkout/cart changes or messages were sent.
+
+Final validation: 47/47 tests and syntax checks passed. In a live sequential
+search, an InterSkol request returned its exact model; the original combined
+PROFIPOWER/DEKO request returned only the two matching models with partial status,
+not stale InterSkol or unrelated leading products. Native idempotent list retry
+returned already_present with the same four exact SKUs and private visibility.
+
+Final real stdio SDK acceptance: 28 tools; both index tabs yielded all 14 native
+objects with complete coverage. A separate named read returned verified/private
+and all four exact SKUs. A second SDK apply returned already_present/verified with
+the same set. Added delayed-detail hydration regression after observing that race
+in a real repeated read; no duplicate creation was attempted in response.

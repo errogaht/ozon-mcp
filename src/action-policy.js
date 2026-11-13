@@ -13,7 +13,7 @@ export function scopedURL(value, scope = 'catalog') {
   if (u.protocol !== 'https:' || !['ozon.ru', 'www.ozon.ru'].includes(u.hostname) || u.port || u.username || u.password || /%(?:2f|5c|00|25)/i.test(u.pathname)) throw new AppError('invalid_url', 'Нужна HTTPS-ссылка на Ozon.');
   const product = /^\/product\/[^/]+\/?(?:(?:reviews|questions|features|description|videos)\/?)?$/.test(u.pathname);
   const catalog = /^\/(?:search\/?|category\/[^?#]+|seller\/[^?#]+|brand\/[^?#]+|)$/.test(u.pathname);
-  const account = /^\/(?:my\/(?:orderlist|orderdetails|order|favorites|wishlist|collections|collection|returns|return|reviews|review|checkout)(?:\/[^?#]*)?|cart\/?|gocheckout\/?|checkout\/?|collection\/[^?#]+|selections\/(?:list|[\w-]+)\/?|my\/main\/?)$/.test(u.pathname);
+  const account = /^\/(?:my\/(?:orderlist|orderdetails|order|favorites|wishlist|collections|collection|returns|return|reviews|review|checkout)(?:\/[^?#]*)?|cart\/?|gocheckout\/?|checkout\/?|collection\/[^?#]+|selections\/(?:list|form|addProducts|view\/[\w-]+|[\w-]+)\/?|my\/main\/?)$/.test(u.pathname);
   if (!(product || catalog || (scope !== 'catalog' && account))) throw new AppError('unsupported_route', 'Этот адрес не относится к текущему пользовательскому сценарию.');
   if (scope === 'orders' && account && !/^\/my\/(?:order|return|review)/.test(u.pathname)) throw new AppError('unsupported_route', 'Разрешены только страницы заказов/возвратов/отзывов.');
   if (scope === 'collections' && account && !/favorite|wishlist|collection|selection/.test(u.pathname)) throw new AppError('unsupported_route', 'Разрешены только избранное и подборки.');
