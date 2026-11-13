@@ -14,11 +14,11 @@ test('Checkout preparation binds real quantity, arrival date and literal financi
   const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true });
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ozon-prepare-'));
   try {
-    const page = await browser.newPage(); let shownQuantity = 1;
+    const page = await browser.newPage(); let shownQuantity = 1; let couponEnabled = false;
     await page.route('https://www.ozon.ru/**', route => route.fulfill({ contentType: 'text/html; charset=utf-8', body: route.request().url().includes('gocheckout')
       ? `<article><h2>Fixture product</h2><p>${shownQuantity} шт</p></article><p>Итого 99 ₽</p><section>Ozon Рассрочка<p>Льготный период, 0 ₽ сегодня, 20 ₽ × 6 мес</p></section><p>Пункт Ozon: улица Тестовая, 70. Срок хранения заказа — 14 дней</p><p>Доставка завтра</p><button onclick="window.submitted=true">Оформить заказ</button>`
-      : '<h1>Fixture product</h1><button onclick="location.href=\'/gocheckout\'">Купить сейчас</button>' }));
-    const workflows = new ConsumerWorkflows({ async beginRun() { return page; } });
+      : `<h1>Fixture product</h1>${couponEnabled?'<section><p>99 ₽</p><div><button>Скидка по купону</button><p>Применён</p></div></section>':''}<button onclick="location.href='/gocheckout'">Купить сейчас</button>` }));
+    const workflows = new ConsumerWorkflows({ async connect() {}, async beginRun() { return page; } });
     workflows.ownerHash = async () => 'fixture-owner'; workflows.confirmations = new ConfirmationStore(root);
     const cfg = await loadSettings();
     workflows.adapt = async adapter => {
@@ -49,6 +49,16 @@ test('Checkout preparation binds real quantity, arrival date and literal financi
     const changed = await workflows.prepareAction('checkout', args, cfg);
     assert.equal(changed.status, 'prepare_incomplete');
     assert.ok(changed.missing.some(message => /Количество позиции/.test(message)));
+    // A late/new coupon cannot reuse an older no-coupon token, and a higher
+    // total must be blocked even when the model returns an otherwise valid form.
+    shownQuantity = 1; couponEnabled = true;
+    workflows.priceForProduct = async () => ({coupon:{priceRub:90}});
+    const undiscounted = await workflows.prepareAction('checkout',args,cfg);
+    assert.equal(undiscounted.status,'prepare_incomplete');
+    assert.ok(undiscounted.missing.some(message=>/купон/iu.test(message)));
+    assert.equal(undiscounted.confirmation,undefined);
+    workflows.priceForProduct = async () => ({coupon:{priceRub:99}});
+    await assert.rejects(workflows.confirmAction({confirmation:{...first.confirmation,confirmed:true}},cfg),error=>error.code==='preview_changed');
     assert.equal(await page.evaluate(() => window.submitted ?? false), false);
   } finally { await browser.close(); await fs.rm(root, { recursive: true, force: true }); }
 });

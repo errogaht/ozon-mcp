@@ -92,3 +92,24 @@ objects with complete coverage. A separate named read returned verified/private
 and all four exact SKUs. A second SDK apply returned already_present/verified with
 the same set. Added delayed-detail hydration regression after observing that race
 in a real repeated read; no duplicate creation was attempted in response.
+
+## Coupon-aware pricing and checkout
+
+Product and price verification return coupon presence, observed applied state,
+original conditions and verified Ozon Card amount already including its discount.
+Search propagates coupon information. Checkout prepares apply a detected coupon
+through native UI, recheck exact SKU and discount price, and refuse unconfirmed
+activation/price or a more expensive final total. Confirmation facts include the
+coupon and are revalidated again; there is no caller bypass flag.
+
+Synthetic scenarios cover applied-vs-inactive state, exact price grounding, no
+double discount, quantity, expensive checkout rejection, native activation and
+idempotence. Live product read verified an already-applied coupon and price.
+New live activation and actual order submission are not claimed as tested.
+
+Validation: full 50-test suite and syntax checks pass. An added checkout fixture
+also blocks a higher-than-coupon total and rejects an old no-coupon confirmation
+after a coupon appears. Live product read confirmed coupon already applied and
+7,276 RUB; a real checkout preview showed the same discounted total. The preview
+remained incomplete because separate item/payment guards did not pass; no final
+order was submitted and this is not claimed as full checkout acceptance.

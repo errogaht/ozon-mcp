@@ -1,3 +1,4 @@
+import { productCoupon, couponCheckoutErrors } from './coupons.js';
 import { ensureShoppingList, readNamedList, listIndex } from './shopping-lists.js';
 import { waitForSearch, preciseQueryMatches } from './search-readiness.js';
 import { ConsumerOperations, validateCardPrice } from './operations.js';
@@ -66,7 +67,7 @@ export class ConsumerWorkflows extends ConsumerOperations {
         if (!proof.matches) { rejected.push({ sku, reason: 'delivery_deadline_unverified' }); continue; }
         if (proof.source === 'selected_filter') delivery = { ...delivery, deadlineVerifiedByFilter: proof.withinDays };
       }
-      products.push({ evidenceId: entityId('card', sku, text), sku: productId(url), title, url: url.split('?')[0], priceOzonCard: price, priceRub: price.amount,
+      products.push({ evidenceId: entityId('card', sku, text), sku: productId(url), title, url: url.split('?')[0], priceOzonCard: price, priceRub: price.amount, coupon: price.coupon ?? (/купон/iu.test(text) ? {available:true,applied:null,priceRub:null,inspectionRequired:true} : null),
         rating: literal.rating, ratingKind: literal.ratingKind, storeRating: literal.storeRating, reviewsCount: literal.reviewsCount, questionsCount: literal.questionsCount,
         delivery, stockLabel: literal.stockLabel ?? raw.stockLabel, badges: raw.badges, sellerName: raw.sellerName,
         media: candidate?.media?.length ? await this.media.register(candidate.media, { pageUrl: adapter.page.url(), sourceRef: raw.sourceRef }) : await this.resolvedMedia(adapter, raw.mediaRefs), cardText: text, observedAt: new Date().toISOString() });
@@ -252,6 +253,15 @@ export class ConsumerWorkflows extends ConsumerOperations {
     const pickup = args.pickupPoint ?? cfg.consumer.pickupPoint;
     const adapter = await this.open(target, { kind, scope: checkout ? 'checkout' : kind === 'discount' ? 'catalog' : 'orders', mode: 'prepare', fixedProductSku: checkout ? productId(target) : null, mediaIds: args.mediaIds ?? args.evidenceMediaIds ?? [] }, cfg);
     const originalProductTitle = checkout ? await adapter.page.locator('h1').first().innerText().catch(() => '') : null;
+    let coupon = null;
+    if(checkout){
+      coupon=await productCoupon(adapter.page,{apply:true});
+      if(coupon.available){
+        if(!coupon.applied)return {status:'prepare_incomplete',action:kind,missing:couponCheckoutErrors(coupon,null,args.quantity??1),coupon};
+        const priced=await this.priceForProduct(target,cfg);
+        coupon={...coupon,priceRub:priced.coupon?.priceRub??null};
+      }
+    }
     let originalOrderNumber = null;
     if (['return', 'review'].includes(kind)) {
       const original = await adapter.page.locator('body').innerText();
@@ -317,6 +327,7 @@ export class ConsumerWorkflows extends ConsumerOperations {
         const quantity = (evidenceText(adapter, item.quantitySourceRef) ?? '').trim();
         if (quantity !== String(item.quantity) && !quantityPattern.test(quantity) && !quantityRow) missing.push('Количество позиции не подтверждено в его собственном контроле.');
       }
+      missing.push(...couponCheckoutErrors(coupon,data.totalRub,args.quantity??1));
       const totalText = evidenceText(adapter, data.totalSourceRef) ?? '';
       if (!(data.totalRub > 0) || !totalText.replace(/\s/g, '').includes(String(data.totalRub))) missing.push('Не подтверждена итоговая сумма заказа в её собственном блоке.');
       if (args.maxTotalRub !== undefined && data.totalRub > args.maxTotalRub) missing.push('Итог превышает разрешённый владельцем maxTotalRub.');
@@ -339,6 +350,7 @@ export class ConsumerWorkflows extends ConsumerOperations {
       const charges = [...new Set((data.additionalChargeRefs ?? []).map(ref => evidenceText(adapter, ref)).filter(Boolean))].sort();
       if (data.additionalCharges.length && !charges.length) missing.push('Дополнительные платежи указаны без собственных источников.');
       facts = { productUrl: target.split('?')[0], items: data.items.map(item => ({ title: originalProductTitle || item.title, sku: item.sku, quantity: item.quantity })), totalRub: data.totalRub, currency: 'RUB',
+        ...(coupon?.available ? {coupon:{applied:coupon.applied,priceRub:coupon.priceRub,label:coupon.label,promotionUrl:coupon.promotionUrl}} : {}),
         payment, paymentTerms: payText, delivery: { method: data.delivery.method, pickupPoint: pickup, pickupSourceText: pickupText, sourceText: deliveryText, earliestDate: dates.earliest, latestDate: dates.latest }, additionalCharges: charges };
     } else {
       // Re-read every prepared form proof after the final fresh observation.

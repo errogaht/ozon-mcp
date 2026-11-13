@@ -1,3 +1,4 @@
+import { productCoupon } from './coupons.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
@@ -94,6 +95,7 @@ export class ConsumerOperations {
     }, outputSchemas.product_summary, subCfg);
     const { data, meta } = result;
     const price = validateCardPrice(data.priceOzonCard, adapter);
+    const coupon = await productCoupon(adapter.page,{cardPrice:price});
     let description = null; let descriptionParts = []; let descriptionExpanded = false; let characteristics = []; let characteristicsExpanded = false;
     const missing = [...data.missing]; const subtasks = [meta];
     if (sections.includes('description')) {
@@ -121,7 +123,7 @@ export class ConsumerOperations {
       characteristicsExpanded = section.data.expanded; missing.push(...section.data.missing); subtasks.push(section.meta);
     }
     return { sku: productId(args.url), url: scopedURL(args.url), title: this.checked(data.title.value, data.title.sourceRef, adapter),
-      priceOzonCard: price, priceRub: price.amount, rating: this.checked(data.rating, data.ratingSourceRef, adapter),
+      priceOzonCard: price, priceRub: price.amount, coupon, rating: this.checked(data.rating, data.ratingSourceRef, adapter),
       reviewsCount: this.checked(data.reviewsCount, data.reviewsSourceRef, adapter), questionsCount: this.checked(data.questionsCount, data.questionsSourceRef, adapter),
       description, descriptionParts, descriptionExpanded, characteristics, characteristicsExpanded,
       seller: data.seller, delivery: data.delivery, variant: data.variant.value, media: await this.resolvedMedia(adapter, data.mediaRefs),
@@ -218,7 +220,8 @@ export class ConsumerOperations {
     const result = await this.adapt(adapter, { action: 'Read ONLY Ozon Card price and pickup delivery label for this exact SKU. No other research.',
       requirements: 'Read bank-price control. Use browser_view for green price/bank logos; if needed open С банками to inspect conditions. Ozon Bank/Card must be included. Also read the actual pickup arrival label (not retention/payment dates), with exact deliverySourceRef; if not observed return null. Do not buy, add to cart, subscribe or open a bank account. Price needs exact sourceRef and confirmed card basis.' }, outputSchemas.price_only, { ...cfg, adapter: { ...cfg.adapter, maxSteps: 8 } });
     const deliveryLabel = containsLiteral(evidenceText(adapter, result.data.deliverySourceRef), result.data.deliveryLabel) ? result.data.deliveryLabel : null;
-    return { ...validateCardPrice(result.data.priceOzonCard, adapter), delivery: deliveryDates(deliveryLabel), sourceUrl: this.pricePage.url().split('?')[0], observedAt: new Date().toISOString(), verification: result.meta, missing: result.data.missing };
+    const cardPrice = validateCardPrice(result.data.priceOzonCard, adapter);
+    return { ...cardPrice, coupon: await productCoupon(adapter.page,{cardPrice}), delivery: deliveryDates(deliveryLabel), sourceUrl: this.pricePage.url().split('?')[0], observedAt: new Date().toISOString(), verification: result.meta, missing: result.data.missing };
   }
   async reviewScope(adapter, scope, cfg, apply = true) {
     return selectReviewScope(adapter, scope, { apply, verifyVisual: async () => {
