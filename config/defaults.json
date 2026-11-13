@@ -1,0 +1,42 @@
+{
+  "provider": {
+    "baseURL": "https://api.openai.com/v1",
+    "keyFile": "~/.config/ozon-mcp/provider.key",
+    "timeoutMs": 90000
+  },
+  "models": {
+    "browserAgent": {
+      "model": "gpt-6-luna",
+      "reasoningEffort": "medium"
+    },
+    "mediaAnalysis": {
+      "model": "gpt-6-luna",
+      "reasoningEffort": "medium"
+    }
+  },
+  "browser": {
+    "executable": "/usr/bin/google-chrome",
+    "profileDir": "~/.local/share/ozon-mcp/chrome-profile-tcp",
+    "connectionFile": "~/.local/share/ozon-mcp/browser-tcp.json",
+    "disableQuic": true,
+    "viewportWidth": 1440,
+    "viewportHeight": 1000,
+    "navigationTimeoutMs": 30000
+  },
+  "agent": {
+    "maxSteps": 10,
+    "timeoutMs": 240000,
+    "snapshotMaxChars": 22000,
+    "defaultLimit": 5,
+    "maxLimit": 30
+  },
+  "adapter": {
+    "maxSteps": 24
+  },
+  "consumer": {
+    "priceBasis": "ozon_card",
+    "payment": "ozon_installment",
+    "deliveryMethod": "pickup",
+    "pickupPoint": null
+  }
+}

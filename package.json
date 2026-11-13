@@ -1,0 +1,38 @@
+{
+  "name": "ozon-consumer-mcp",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Local Ozon consumer MCP with a persistent Chrome profile and a compact-tree browser agent",
+  "bin": {
+    "ozon-mcp": "./src/cli.js"
+  },
+  "scripts": {
+    "start": "node src/cli.js serve",
+    "login": "node src/cli.js login",
+    "status": "node src/cli.js status",
+    "auth:save": "node src/cli.js auth-save",
+    "search": "node src/cli.js search",
+    "test": "node --test test/*.test.js",
+    "check": "node scripts/check.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "openai": "7.55.0",
+    "playwright": "1.65.0",
+    "yaml": "2.9.1",
+    "zod": "4.6.7"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/errogaht/ozon-mcp.git"
+  },
+  "homepage": "https://github.com/errogaht/ozon-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/errogaht/ozon-mcp/issues"
+  }
+}

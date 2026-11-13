@@ -1,0 +1,161 @@
+{
+  "status": "complete",
+  "query": "мобильные кондиционеры до 30000 руб",
+  "maxPriceRub": 30000,
+  "requestedLimit": 5,
+  "products": [
+    {
+      "evidenceId": "p1",
+      "sku": "3525588522",
+      "title": "Напольный кондиционер мобильный RAPID RAC-09 CEM/N6, белый, напольный, 2600кВт, для площади 24 кв.м., осушение, охлаждение, вентиляция, самодиагностика, фреон",
+      "url": "https://www.ozon.ru/product/napolnyy-konditsioner-mobilnyy-rapid-rac-09-cem-n6-belyy-napolnyy-2600kvt-dlya-ploshchadi-24-kv-3525588522/",
+      "priceRub": 14989,
+      "priceText": "14 989 ₽",
+      "priceBasis": "displayed_conditions_not_verified",
+      "observedPrices": [
+        {
+          "rub": 14989,
+          "label": "14 989 ₽"
+        },
+        {
+          "rub": 39032,
+          "label": "39 032 ₽"
+        },
+        {
+          "rub": 39032,
+          "label": "39 032 ₽"
+        }
+      ],
+      "cardText": "14 989 ₽\n39 032 ₽\n39 032 ₽\n−61%\n1 076 ед осталось\nНапольный кондиционер мобильный RAPID RAC-09 CEM/N6, белый, напольный, 2600кВт, для площади 24 кв.м., осушение, охлаждение, вентиляция, самодиагностика, фреон\n4.8\n2 265 отзывов\n17 ноября",
+      "sourceUrl": "https://www.ozon.ru/category/konditsionery-i-split-sistemy-10726/?category_was_predicted=true&deny_category_prediction=true&price=0.000%3B30000.000&text=%D0%BC%D0%BE%D0%B1%D0%B8%D0%BB%D1%8C%D0%BD%D1%8B%D0%B9+%D0%BA%D0%BE%D0%BD%D0%B4%D0%B8%D1%86%D0%B8%D0%BE%D0%BD%D0%B5%D1%80",
+      "observedAt": "2026-11-12T19:57:28.825Z"
+    },
+    {
+      "evidenceId": "p2",
+      "sku": "4823064205",
+      "title": "Мобильный кондиционер Midea MPPH1-07СHN7G1, 2,05 кВт до 20м2, ионизатор, охлаждение - осушение - вентиляция, таймер, ночной режим, пульт ДУ.",
+      "url": "https://www.ozon.ru/product/mobilnyy-konditsioner-midea-mpph1-07shn7g1-2-05-kvt-do-20m2-ionizator-ohlazhdenie-osushenie-4823064205/",
+      "priceRub": 11152,
+      "priceText": "11 152 ₽",
+      "priceBasis": "displayed_conditions_not_verified",
+      "observedPrices": [
+        {
+          "rub": 11152,
+          "label": "11 152 ₽"
+        },
+        {
+          "rub": 14451,
+          "label": "14 451 ₽"
+        },
+        {
+          "rub": 14451,
+          "label": "14 451 ₽"
+        }
+      ],
+      "cardText": "11 152 ₽\n14 451 ₽\n14 451 ₽\n−22%\n60 ед осталось\nMidea\nМобильный кондиционер Midea MPPH1-07СHN7G1, 2,05 кВт до 20м2, ионизатор, охлаждение - осушение - вентиляция, таймер, ночной режим, пульт ДУ.\n4.8\n539 отзывов\n15 ноября",
+      "sourceUrl": "https://www.ozon.ru/category/konditsionery-i-split-sistemy-10726/?category_was_predicted=true&deny_category_prediction=true&price=0.000%3B30000.000&text=%D0%BC%D0%BE%D0%B1%D0%B8%D0%BB%D1%8C%D0%BD%D1%8B%D0%B9+%D0%BA%D0%BE%D0%BD%D0%B4%D0%B8%D1%86%D0%B8%D0%BE%D0%BD%D0%B5%D1%80",
+      "observedAt": "2026-11-12T19:57:28.826Z"
+    },
+    {
+      "evidenceId": "p3",
+      "sku": "2233078706",
+      "title": "Кондиционер мобильный Hyundai HPAC-12-2 охлаждение, 12000 BTU, белый корпус",
+      "url": "https://www.ozon.ru/product/konditsioner-mobilnyy-hyundai-hpac-12-2-ohlazhdenie-12000-btu-belyy-korpus-2233078706/",
+      "priceRub": 18734,
+      "priceText": "18 734 ₽",
+      "priceBasis": "displayed_conditions_not_verified",
+      "observedPrices": [
+        {
+          "rub": 18734,
+          "label": "18 734 ₽"
+        },
+        {
+          "rub": 34693,
+          "label": "34 693 ₽"
+        },
+        {
+          "rub": 34693,
+          "label": "34 693 ₽"
+        }
+      ],
+      "cardText": "18 734 ₽\n34 693 ₽\n34 693 ₽\n−46%\n196 ед осталось\nКондиционер мобильный Hyundai HPAC-12-2 охлаждение, 12000 BTU, белый корпус\n4.8\n495 отзывов\nПослезавтра",
+      "sourceUrl": "https://www.ozon.ru/category/konditsionery-i-split-sistemy-10726/?category_was_predicted=true&deny_category_prediction=true&price=0.000%3B30000.000&text=%D0%BC%D0%BE%D0%B1%D0%B8%D0%BB%D1%8C%D0%BD%D1%8B%D0%B9+%D0%BA%D0%BE%D0%BD%D0%B4%D0%B8%D1%86%D0%B8%D0%BE%D0%BD%D0%B5%D1%80",
+      "observedAt": "2026-11-12T19:57:28.826Z"
+    },
+    {
+      "evidenceId": "p4",
+      "sku": "5143476081",
+      "title": "Кондиционер мобильный Centek CT-67AM12/35м2/мощность 900Вт/Компрессор-HIGHLY/Завод - AUX/",
+      "url": "https://www.ozon.ru/product/konditsioner-mobilnyy-centek-ct-67am12-35m2-moshchnost-900vt-kompressor-highly-zavod-aux-5143476081/",
+      "priceRub": 23664,
+      "priceText": "23 664 ₽",
+      "priceBasis": "displayed_conditions_not_verified",
+      "observedPrices": [
+        {
+          "rub": 23664,
+          "label": "23 664 ₽"
+        }
+      ],
+      "cardText": "23 664 ₽\nСтало дешевле\nКондиционер мобильный Centek CT-67AM12/35м2/мощность 900Вт/Компрессор-HIGHLY/Завод - AUX/\n4.6\n11 отзывов\n1",
+      "sourceUrl": "https://www.ozon.ru/category/konditsionery-i-split-sistemy-10726/?category_was_predicted=true&deny_category_prediction=true&price=0.000%3B30000.000&text=%D0%BC%D0%BE%D0%B1%D0%B8%D0%BB%D1%8C%D0%BD%D1%8B%D0%B9+%D0%BA%D0%BE%D0%BD%D0%B4%D0%B8%D1%86%D0%B8%D0%BE%D0%BD%D0%B5%D1%80",
+      "observedAt": "2026-11-12T19:57:28.826Z"
+    },
+    {
+      "evidenceId": "p6",
+      "sku": "3502633664",
+      "title": "Мобильный кондиционер iFFALCON PSL 12K BTU комплект, 12000 BTU, площадь до 30 кв.м.",
+      "url": "https://www.ozon.ru/product/mobilnyy-konditsioner-iffalcon-psl-12k-btu-komplekt-12000-btu-ploshchad-do-30-kv-m-3502633664/",
+      "priceRub": 15751,
+      "priceText": "15 751 ₽",
+      "priceBasis": "displayed_conditions_not_verified",
+      "observedPrices": [
+        {
+          "rub": 15751,
+          "label": "15 751 ₽"
+        },
+        {
+          "rub": 33999,
+          "label": "33 999 ₽"
+        },
+        {
+          "rub": 33999,
+          "label": "33 999 ₽"
+        }
+      ],
+      "cardText": "15 751 ₽\n33 999 ₽\n33 999 ₽\n−53%\n18 ед осталось\nМобильный кондиционер iFFALCON PSL 12K BTU комплект, 12000 BTU, площадь до 30 кв.м.\n4.8\n472 отзыва\n18 ноября",
+      "sourceUrl": "https://www.ozon.ru/category/konditsionery-i-split-sistemy-10726/?category_was_predicted=true&deny_category_prediction=true&price=0.000%3B30000.000&text=%D0%BC%D0%BE%D0%B1%D0%B8%D0%BB%D1%8C%D0%BD%D1%8B%D0%B9+%D0%BA%D0%BE%D0%BD%D0%B4%D0%B8%D1%86%D0%B8%D0%BE%D0%BD%D0%B5%D1%80",
+      "observedAt": "2026-11-12T19:57:28.826Z"
+    }
+  ],
+  "note": "Найдено 5 мобильных кондиционеров с отображаемой ценой до 30 000 ₽. Цены приведены в том виде, как показаны на карточках; условия скидки/оплаты не проверялись. Доступность и доставка зависят от региона и аккаунта.",
+  "warnings": [
+    "Показанные цены могут требовать Ozon Карту или подписку. Итоговая цена, наличие и доставка проверяются в карточке для текущего региона."
+  ],
+  "observedAt": "2026-11-12T19:57:34.834Z",
+  "agent": {
+    "model": "gpt-6-luna",
+    "reasoningEffort": "medium",
+    "steps": 2,
+    "elapsedMs": 9763,
+    "usage": {
+      "inputTokens": 8593,
+      "outputTokens": 138,
+      "cachedInputTokens": 0
+    },
+    "trace": [
+      {
+        "step": 1,
+        "action": "search_catalog",
+        "query": "мобильный кондиционер",
+        "maxPriceRub": 30000,
+        "sort": "relevance",
+        "observedProducts": 8,
+        "treeChars": 7578
+      },
+      {
+        "step": 2,
+        "action": "finish"
+      }
+    ]
+  }
+}

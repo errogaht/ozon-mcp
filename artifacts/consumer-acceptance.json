@@ -1,0 +1,73 @@
+{
+  "version": "0.2.0",
+  "checkedAt": "2026-11-13T00:30:19.799Z",
+  "toolCount": 25,
+  "model": {
+    "browserAgent": "gpt-6-luna",
+    "reasoning": "medium"
+  },
+  "search": {
+    "status": "complete",
+    "query": "мобильный кондиционер",
+    "products": [
+      {
+        "sku": "6012329832",
+        "title": "Мобильный кондиционер Centek CT-67AM07",
+        "priceOzonCardRub": 20626,
+        "rating": null,
+        "storeRating": 4.9,
+        "delivery": {
+          "label": "С 14 ноября",
+          "earliest": "2026-11-14",
+          "latest": null,
+          "days": null,
+          "deadlineVerifiedByFilter": 7
+        }
+      },
+      {
+        "sku": "6012327626",
+        "title": "Мобильный кондиционер Centek CT-67AM09",
+        "priceOzonCardRub": 22809,
+        "rating": null,
+        "storeRating": 4.9,
+        "delivery": {
+          "label": "С 14 ноября",
+          "earliest": "2026-11-14",
+          "latest": null,
+          "days": null,
+          "deadlineVerifiedByFilter": 7
+        }
+      }
+    ],
+    "filters": [
+      "Centek",
+      "cheaper",
+      "price<=30000",
+      "delivery<=7"
+    ]
+  },
+  "publicProduct": {
+    "sku": "5143476081",
+    "title": "Кондиционер мобильный Centek CT-67AM12/35м2/мощность 900Вт/Компрессор-HIGHLY/Завод - AUX/",
+    "descriptionChars": 818,
+    "characteristicPairs": 26,
+    "galleryImages": 13,
+    "allOpenedMain": 13
+  },
+  "reviewPhoto": {
+    "images": 1,
+    "complete": true
+  },
+  "reviewVideo": {
+    "videos": 1,
+    "complete": true
+  },
+  "checkoutValidation": {
+    "sameFacts": true,
+    "finalDispatched": false
+  },
+  "verification": {
+    "testsPassed": 36,
+    "syntaxCheck": true
+  }
+}

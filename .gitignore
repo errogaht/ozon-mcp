@@ -1,0 +1,22 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+artifacts/private/
+coverage/
+*.key
+*storage-state*.json
+chrome-profile*/
+# Local account state and release preparation must never be published.
+.auth/
+.state/
+uploads/
+backups/
+*.pem
+*.p12
+*.sqlite*
+*.db
+*.har
+settings.local.json
+preferences.json
